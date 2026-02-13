@@ -1,0 +1,89 @@
+name: MLOps CI-CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Run training script
+      run: python scripts/train.py
+
+    - name: Upload model and metrics
+      uses: actions/upload-artifact@v4
+      with:
+        name: trained-model
+        path: |
+          model/
+          metrics.json
+  deploy:
+    needs: train
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Download trained model artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: trained-model
+
+    - name: Install jq and bc
+      run: sudo apt-get update && sudo apt-get install -y jq bc
+
+    - name: Compare metrics
+      id: compare
+      run: |
+        CUR_R2=$(jq .r2 metrics.json)
+        CUR_MSE=$(jq .mse metrics.json)
+
+        BEST_R2=${{ vars.BEST_R2 }}
+        BEST_MSE=${{ vars.BEST_MSE }}
+
+        echo "Current R2: $CUR_R2"
+        echo "Best R2: $BEST_R2"
+        echo "Current MSE: $CUR_MSE"
+        echo "Best MSE: $BEST_MSE"
+
+        if (( $(echo "$CUR_R2 <= $BEST_R2" | bc -l) )); then
+          echo "2022BCD0030 ---- Metric did not improve"
+          exit 1
+        fi
+
+        echo "new_r2=$CUR_R2" >> $GITHUB_OUTPUT
+        echo "new_mse=$CUR_MSE" >> $GITHUB_OUTPUT
+
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_TOKEN }}
+
+    - name: Build and push Docker image
+      run: |
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/wine-mlops:${{ github.run_number }} .
+        docker push ${{ secrets.DOCKER_USERNAME }}/wine-mlops:${{ github.run_number }}
+
+    - name: Update best metrics
+      run: |
+        gh variable set BEST_R2 -b ${{ steps.compare.outputs.new_r2 }}
+        gh variable set BEST_MSE -b ${{ steps.compare.outputs.new_mse }}
+      env:
+        GH_TOKEN: ${{ secrets.GH_PAT }}
