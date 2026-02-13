@@ -80,6 +80,7 @@ jobs:
         docker build -t ${{ secrets.DOCKER_USERNAME }}/wine-mlops:${{ github.run_number }} .
         docker push ${{ secrets.DOCKER_USERNAME }}/wine-mlops:${{ github.run_number }}
 
+
     - name: Update best metrics
       run: |
         gh variable set BEST_R2 -b ${{ steps.compare.outputs.new_r2 }}
