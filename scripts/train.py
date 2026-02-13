@@ -8,7 +8,7 @@ import os
 
 os.makedirs("model", exist_ok=True)
 
-df = pd.read_csv("data/winequality-red.csv", sep=",")
+df = pd.read_csv("dataset/winequality-red.csv", sep=",")
 df.columns = df.columns.str.strip().str.lower()
 
 X = df.drop("quality", axis=1)
