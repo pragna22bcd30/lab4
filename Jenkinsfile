@@ -56,8 +56,8 @@ pipeline {
 
                         def best = readJSON text: BEST_JSON
 
-                        if (env.CURRENT_R2 as Double > best.r2 as Double &&
-                             env.CURRENT_MSE as Double < best.mse as Double) {
+                        if ((env.CURRENT_R2 as Double) > (best.r2 as Double) &&
+                             (env.CURRENT_MSE as Double) < (best.mse as Double)) {
 
                             env.MODEL_IMPROVED = "true"
                             echo "Model improved"
