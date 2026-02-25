@@ -3,7 +3,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "2022bcs0138nissiveronika/wine-mlops"
+        IMAGE_NAME = "pragnasri22bcd30/wine-mlops"
         BUILD_TAG = "${env.BUILD_NUMBER}"
     }
 
